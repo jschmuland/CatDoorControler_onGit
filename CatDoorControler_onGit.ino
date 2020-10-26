@@ -37,7 +37,10 @@ time_t morningCurfewTime = AlarmHMS(8,0,0);
 //enabling the reset function
 void(* resetFunc) (void) = 0;
 
-/*************************************** SETUP **********************************************************/
+//**************************************************************************//
+//                                 Setup                                    //
+//                        Ya run this once, Boom!                           //
+//**************************************************************************//
 void setup() {
   Serial.begin(SERIALBAUD);
   while (!Serial) ; // wait for Arduino Serial Monitor
@@ -60,8 +63,11 @@ void setup() {
   morningAlarmId      = Alarm.alarmRepeat(morningCurfewTime, morningTimeCheck);
 }
 
-/******************************** LOOP *********************************************************/
-//loop variables
+//**************************************************************************//
+//                                  Loop                                    //
+//                        This is the loop the loops                        //
+//**************************************************************************//
+//**************************** loop variables ******************************//
 bool catsGoOut;
 bool catsCanComeIn;
 bool warmEnoughToGoOutForcast;
@@ -75,6 +81,7 @@ time_t sunsetTime;
 time_t sunriseTime;
 time_t t;
 
+//******************************* THE LOOP *********************************//
 void loop() {
   basicLoop(); //Checks WiFi connection, runs OTA, runs Blynk loop
   Alarm.delay(0); //Enables TimerAlarms to work
@@ -133,16 +140,16 @@ void morningTimeCheck(){
       }// end if cats can go out
     }//end if warmEnoughToGoOutNow
     Serial.println("  Starting weather compair for the day.");
+  }//end override everthing
     itsNightTime = false;
-  }
 }
 
 /*ran at daytimeWeatherCompair interval
   checks if its night timer
-  and if cats can already go out
+  and if cat's can already go out
   and if its warm enough then lets cats go out*/
 void daytimeWeatherCompair(){
-  if !itsNightTime{
+  if (!itsNightTime){
     p("\nCompairing Weather:",true);
     if (!catsGoOut){
       Serial.println("  Cat's can't go out yet, Checking if its warm enough now:");
@@ -196,6 +203,40 @@ void closeOutside(){
   Serial.println (" -> Cats can't go out");
   terminal.println(" -> Cats can't go out");
 }
+
+// check to see if the new temp is > than the allowed temp ************
+void checkTempBools(){
+  warmEnoughToGoOutForcast = minTemp > minTempCatsGoOut? true : false;
+  warmEnoughToGoOutNow = currentTemp > minTempCatsGoOut? true : false;
+}
+
+//This fuction gets the weather from openweathermap and places it into the values below. To find out what you can get look at the openweathertest2 sketch
+void getWeather(){
+   // Create the structures that hold the retrieved weather
+  OW_current *current = new OW_current;
+  OW_hourly *hourly = new OW_hourly;
+  OW_daily  *daily = new OW_daily;
+
+  Serial.println("\nRequesting weather information from OpenWeather... ");
+  ow.getForecast(current, hourly, daily, OPEN_WEATHER_API_KEY, LAT, LONG, UNITS, LANGUAGE);
+  terminal.clear();
+  p("Weather from Open Weather is now in system",true);
+
+  setTime(current->dt + TIME_OFFSET);
+
+  currentTemp = current->temp;
+  minTemp = (daily->temp_min[0])<(daily->temp_min[1])?daily->temp_min[0]:daily->temp_min[1];
+  checkTempBools();
+  Blynk.virtualWrite(V0,minTemp);
+
+  sunsetTime = current->sunset + TIME_OFFSET;
+  sunriseTime = current->sunrise + TIME_OFFSET;
+
+  delete current;
+  delete hourly;
+  delete daily;
+}
+
 //**************************************************************************//
 //                          VPIN Fuctions                                   //
 //                    these get called by the app                           //
@@ -256,61 +297,16 @@ BLYNK_WRITE(INPUT_MORNING_CURFEW_TIME_VPIN){
   p("The cats can go out in the morning at " + strTime(time_t(morningCurfewTime)),true);
 }
 
+//This fuction stops all timers and blocks logic from logicing
 BLYNK_WRITE(TOTAL_OVERRIDE_VPIN){
   overrideEverything = param.asInt();
-  // if (overrideEverything) {
-  //   Alarm.disable(nightAlarmId);
-  //   Alarm.disable(morningAlarmId);
-  //   Alarm.disable(dayWeatherCompairId);
-  // }else{
-  //   Alarm.enable(nightAlarmId);
-  //   Alarm.enable(morningAlarmId);
-  //   Alarm.enable(dayWeatherCompairId);
-  // }
 }
 
-//This fuction gets the weather from openweathermap and places it into the values below. To find out what you can get look at the openweathertest2 sketch
-void getWeather(){
-   // Create the structures that hold the retrieved weather
-  OW_current *current = new OW_current;
-  OW_hourly *hourly = new OW_hourly;
-  OW_daily  *daily = new OW_daily;
-
-  Serial.println("\nRequesting weather information from OpenWeather... ");
-  ow.getForecast(current, hourly, daily, OPEN_WEATHER_API_KEY, LAT, LONG, UNITS, LANGUAGE);
-  terminal.clear();
-  p("Weather from Open Weather is now in system",true);
-
-  setTime(current->dt + TIME_OFFSET);
-
-  currentTemp = current->temp;
-  minTemp = (daily->temp_min[0])<(daily->temp_min[1])?daily->temp_min[0]:daily->temp_min[1];
-  checkTempBools();
-  Blynk.virtualWrite(V0,minTemp);
-
-  sunsetTime = current->sunset + TIME_OFFSET;
-  sunriseTime = current->sunrise + TIME_OFFSET;
-
-  delete current;
-  delete hourly;
-  delete daily;
-}
-
-String strTime(time_t unixTime){
-  unixTime;
-  return ctime(&unixTime);
-}
-
-//******************* check to see if the new temp is > than the allowed temp ************
-void checkTempBools(){
-  warmEnoughToGoOutForcast = minTemp > minTempCatsGoOut? true : false;
-  warmEnoughToGoOutNow = currentTemp > minTempCatsGoOut? true : false;
-}
 //******************************************************************************//
 //                        Startup Functions                                     //
 //******************************************************************************//
 
-//********* Keeping the code out of the startup call **************************//
+// Keeping the code out of the startup call **************************//
 void basicStartup(){
   connectWiFi();
   Blynk.config(SECRET_BLYNK_TOKEN); //,SECRET_SSID,SECRET_PSW connect to the internet and get blink running
@@ -337,7 +333,7 @@ void basicStartup(){
   digitalWrite(LED_BUILTIN, HIGH);
 }
 
-//********* Seting up the LEDs for Colours ***************//
+// Seting up the LEDs for Colours ***************//
 void setupLEDs(){
   //Set up the one pxl
   onePxl.begin();
@@ -352,13 +348,13 @@ void setupLEDs(){
   Serial.println ("LED's Initialized");
 }
 
-//********* Make sure the device and app are on the same page ********************//
+// Make sure the device and app are on the same page ********************//
 BLYNK_CONNECTED() {
   // Request Blynk server to re-send latest values for all pins
   Blynk.syncAll();
 }
 
-//********* Toggle LED*************************************//
+// Toggle LED*************************************//
 void ledBlynk(){
   digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   terminal.flush();
@@ -500,4 +496,10 @@ void p(String txt,bool newLine){
     Serial.println(txt);
     terminal.println(txt);
   }
+}
+
+//Simply returns ctime from unix time
+String strTime(time_t unixTime){
+  unixTime;
+  return ctime(&unixTime);
 }
