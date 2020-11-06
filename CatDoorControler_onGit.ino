@@ -23,9 +23,9 @@ WidgetTerminal terminal(TERMINAL_VPIN);
 //BlynkTimer timer;
 OW_Weather ow; // Weather forecast library instance
 ServoWrap insideServo(INSIDE_SERVO_PIN,180,70);  //inside open 180, inside close 70
-ServoWrap outsideServo(OUTSIDE_SERVO_PIN,30,140); //outside open 30, outside closed 140
+ServoWrap outsideServo(OUTSIDE_SERVO_PIN,140,30); //outside open 30, outside closed 140
 Adafruit_NeoPixel onePxl = Adafruit_NeoPixel(1, ONE_LED_PIN, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel eightPxls = Adafruit_NeoPixel(8, EIGHT_LED_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel eightPxls = Adafruit_NeoPixel(1, EIGHT_LED_PIN, NEO_GRB + NEO_KHZ800);
 uint32_t lowRed = onePxl.Color(50,0,0);
 uint32_t lowGreen = onePxl.Color(0,50,0);
 AlarmId nightAlarmId;
@@ -171,7 +171,7 @@ void daytimeWeatherCompair(){
 //Opens the inside servo
 void openInside(){
   insideServo.openIt();
-  eightPxls.fill(lowGreen,7);
+  eightPxls.fill(lowGreen,0);
   eightPxls.show();
   Serial.println (" -> Cats can come in");
   terminal.println(" -> Cats can come in");
@@ -189,7 +189,7 @@ void openOutside(){
 //Closes the inside servo
 void closeInside(){
   insideServo.closeIt();
-  eightPxls.fill(lowRed,7);
+  eightPxls.fill(lowRed,0);
   eightPxls.show();
   Serial.println (" -> Cats can't come in");
   terminal.println(" -> Cats can't come in");
@@ -342,7 +342,7 @@ void setupLEDs(){
 
   //Set up the 8 pxl ring
   eightPxls.begin();
-  eightPxls.fill(lowRed,7);
+  eightPxls.fill(lowRed,0);
   eightPxls.show(); // Initialize all pixels to red
 
   Serial.println ("LED's Initialized");
